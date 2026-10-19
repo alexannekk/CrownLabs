@@ -173,75 +173,68 @@ class Operator,InstOp,InstAutOp,BastionOp,FrontendController,WebSSHController,QL
 ¹Gateway
 ²Frontend
 
+
+
 ```mermaid
 flowchart LR
 
-Gateway["`Gateway
-    (Envoy Gateway API)`"]
-Proxy["Envoy Proxy"]:::GenericDomainStyle
-GatewayClass["GatewayClass"]:::GenericDomainStyle
-GatewayController["Gateway Controller"]
-APIServer["API Server"]
-subgraph Routes["HTTPRoutes"]
-    subgraph PublicRoutes["`Public HTTPRoutes (has label _crownlabs.polito.it/public-route: true_)`"]
-    WebSSHRoute["`WebSSH HTTPRoute 
-        _/webssh_`"]
-    FrontendRoute["`Frontend-app HTTPRoute
-        _/_`"]
-    QLKubeRoute["`QLKube HTTPRoute
-        _/graph_`"]
+User@{shape: trap-b, label: "User Browser"}
+
+subgraph ReleaseNS["CL Release Namespace"]
+    direction TB
+
+    Gateway["`Gateway
+        (Envoy Gateway API)`"]
+    FrontendApp["Frontend-app"]:::FrontendStyle
+
+    subgraph Routes["HTTPRoutes"]
+        subgraph PublicRoutes["Public Routes"]
+            WebSSHRoute["`WebSSH HTTPRoute
+                _/webssh_`"]
+            FrontendRoute["`Frontend-app HTTPRoute
+                _/_`"]
+            QLKubeRoute["`QLKube HTTPRoute
+                _/graph_`"]
+        end
+        CallbackRoute["`callback HTTPRoute
+            _/app/instauth/callback_`"]
     end
-    CallbackRoute["`callback HTTPRoute 
-        _/app/instauth/callback_`"]
+
+    subgraph SecPols["Security Policies"]
+        SecPolG["Security Policy"]
+        SecPolDummy["Dummy Security Policy"]
+    end
+end
+subgraph TenantNS["`Tenant Namespace: _tenant-xyz_`"]
     OtherRoute["`another HTTPRoute
-        (if Tenant has label 
-        _crownlabs.polito.it/gw-access = crownlabs-main-production_)`"]:::TenantStyle
+        _/instance/{uuid}/{env-name}_`"]
+    BackendService["Backend Service"]
 end
-subgraph Backends["Backend Services"]
-    WebSSHService["WebSSH Service"]
-    FrontendService["Frontend-app Service"]
-    QLKubeService["QLKube Service"]
-    OtherService["another Service"]:::TenantStyle
-    DummyService["dummy Service"]
-    VM@{shape: docs, label: "VMs"}
-end
-subgraph SecPols["Security Policies"]
-    SecPolG["Security Policy"]
-    SecPolDummy["`Security Policy
-        (dummy, only if route has label 
-        _crownlabs.polito.it/public-route: true_)`"]
-end
-Traffic["Request Traffic"]:::FrontendStyle
 
-Gateway -- manages --> Proxy
-Gateway -. accepts .-> Routes
-Gateway -. authenticates .-> SecPols
-Traffic .-> Proxy .-> VM
+User --> Gateway
+User --> FrontendApp
+FrontendApp --> Gateway
 
-WebSSHRoute --> WebSSHService
-FrontendRoute --> FrontendService
-QLKubeRoute --> QLKubeService
-OtherRoute --> OtherService
-CallbackRoute --> DummyService
+Gateway --> Routes
+Gateway -. authenticated through .-> SecPols
+Gateway --> OtherRoute
+SecPolDummy -.-> PublicRoutes
+SecPolG -.-> CallbackRoute
+SecPolG -.-> OtherRoute
 
-WebSSHService --> VM
-FrontendService --> VM
-QLKubeService --> VM
-OtherService --> VM
+PublicRoutes --> BackendService
+OtherRoute --> BackendService
 
-GatewayController -. watches .-> APIServer
-GatewayController -. creates/updates .-> Gateway
-GatewayController -. creates/updates .-> Routes
-
-APIServer --> Gateway
-GatewayClass -. used by .-> Gateway
-
+classDef ReleaseNSStyle stroke:#FF8000,rx:12,ry:12,fill:none,stroke-dasharray:8
+classDef TenantNSStyle stroke:#2222FF,rx:12,ry:12,fill:none,stroke-dasharray:8
 classDef GenericDomainStyle fill:none,rx:12,ry:12,stroke-dasharray:8
 classDef TenantStyle stroke:#2222FF,rx:12,ry:12,fill:none
 classDef FrontendStyle stroke:#FDDCD7,rx:12,ry:12,fill:none
 
-class Routes,PublicRoutes,SecPols,Backends GenericDomainStyle
-class VM TenantStyle
+class ReleaseNS ReleaseNSStyle
+class TenantNS TenantNSStyle
+class Routes,PublicRoutes,SecPols GenericDomainStyle
+class OtherRoute,BackendService TenantStyle
 ```
 
 ## Frontend Logic
