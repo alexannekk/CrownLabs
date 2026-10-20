@@ -173,7 +173,7 @@ class Operator,InstOp,InstAutOp,BastionOp,FrontendController,WebSSHController,QL
 ¹Gateway
 ²Frontend
 
-
+### Physical Flow
 
 ```mermaid
 flowchart LR
@@ -181,60 +181,106 @@ flowchart LR
 User@{shape: trap-b, label: "User Browser"}
 
 subgraph ReleaseNS["CL Release Namespace"]
-    direction TB
+    FrontendApp["Frontend-app"]:::FrontendStyle
+end
+subgraph EnvoyNS["`envoy-gateway-system Namespace`"]
+    LoadBalancer["LoadBalancer"]
+    Deployment["Deployment"]
+    Proxy["Proxy"]
+end
+subgraph TenantNS["`Tenant Namespace: _tenant-xyz_`"]
+    TargetService["Target Service"]
+end
+
+User --> FrontendApp
+User --> LoadBalancer
+FrontendApp --> LoadBalancer
+LoadBalancer --> Proxy
+Proxy --> TargetService
+
+Deployment -. creates/updates .-> LoadBalancer
+Deployment -. creates/updates .-> Proxy
+
+classDef ReleaseNSStyle stroke:#FF8000,rx:12,ry:12,fill:none,stroke-dasharray:8
+classDef EnvoyNSStyle stroke:#38677B,rx:12,ry:12,fill:none,stroke-dasharray:8
+classDef TenantNSStyle stroke:#2222FF,rx:12,ry:12,fill:none,stroke-dasharray:8
+classDef TenantStyle stroke:#2222FF,rx:12,ry:12,fill:none
+classDef FrontendStyle stroke:#FDDCD7,rx:12,ry:12,fill:none
+
+class ReleaseNS ReleaseNSStyle
+class EnvoyNS EnvoyNSStyle
+class TenantNS TenantNSStyle
+class TargetService TenantStyle
+```
+
+### Logical Flow
+
+```mermaid
+flowchart LR
+
+User@{shape: trap-b, label: "User Browser"}
+
+subgraph ReleaseNS["CL Release Namespace"]
 
     Gateway["`Gateway
         (Envoy Gateway API)`"]
     FrontendApp["Frontend-app"]:::FrontendStyle
 
-    subgraph Routes["HTTPRoutes"]
-        subgraph PublicRoutes["Public Routes"]
-            WebSSHRoute["`WebSSH HTTPRoute
-                _/webssh_`"]
-            FrontendRoute["`Frontend-app HTTPRoute
-                _/_`"]
-            QLKubeRoute["`QLKube HTTPRoute
-                _/graph_`"]
-        end
-        CallbackRoute["`callback HTTPRoute
-            _/app/instauth/callback_`"]
-    end
-
     subgraph SecPols["Security Policies"]
         SecPolG["Security Policy"]
         SecPolDummy["Dummy Security Policy"]
     end
+
+    subgraph Routes["HTTPRoutes"]
+        CallbackRoute["`callback HTTPRoute
+            _/app/instauth/callback_`"]
+        subgraph PublicRoutes["Public Routes"]
+            FrontendRoute["`Frontend-app HTTPRoute
+                _/_`"]
+            WebSSHRoute["`WebSSH HTTPRoute
+                _/webssh_`"]
+            QLKubeRoute["`QLKube HTTPRoute
+                _/graph_`"]
+        end
+    end
+end
+subgraph EnvoyNS["`envoy-gateway-system Namespace`"]
+    Deployment["Deployment"]
 end
 subgraph TenantNS["`Tenant Namespace: _tenant-xyz_`"]
     OtherRoute["`another HTTPRoute
         _/instance/{uuid}/{env-name}_`"]
-    BackendService["Backend Service"]
+    TargetService["Target Service"]
 end
 
-User --> Gateway
-User --> FrontendApp
-FrontendApp --> Gateway
-
-Gateway --> Routes
+User -.-> FrontendApp
+User -.-> Gateway
+FrontendApp -.-> Gateway
+Gateway -.-> Routes
+Gateway -.-> OtherRoute
 Gateway -. authenticated through .-> SecPols
-Gateway --> OtherRoute
-SecPolDummy -.-> PublicRoutes
 SecPolG -.-> CallbackRoute
 SecPolG -.-> OtherRoute
+SecPolDummy -.-> PublicRoutes
 
-PublicRoutes --> BackendService
-OtherRoute --> BackendService
+Deployment -. creates/updates .-> Gateway
+Deployment -. creates/updates .-> Routes
+Deployment -. creates/updates .-> SecPols
+Routes -.-> TargetService
+OtherRoute -.-> TargetService
 
 classDef ReleaseNSStyle stroke:#FF8000,rx:12,ry:12,fill:none,stroke-dasharray:8
+classDef EnvoyNSStyle stroke:#38677B,rx:12,ry:12,fill:none,stroke-dasharray:8
 classDef TenantNSStyle stroke:#2222FF,rx:12,ry:12,fill:none,stroke-dasharray:8
 classDef GenericDomainStyle fill:none,rx:12,ry:12,stroke-dasharray:8
 classDef TenantStyle stroke:#2222FF,rx:12,ry:12,fill:none
 classDef FrontendStyle stroke:#FDDCD7,rx:12,ry:12,fill:none
 
 class ReleaseNS ReleaseNSStyle
+class EnvoyNS EnvoyNSStyle
 class TenantNS TenantNSStyle
 class Routes,PublicRoutes,SecPols GenericDomainStyle
-class OtherRoute,BackendService TenantStyle
+class OtherRoute,TargetService TenantStyle
 ```
 
 ## Frontend Logic
