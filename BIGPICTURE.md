@@ -185,7 +185,7 @@ subgraph ReleaseNS["CL Release Namespace"]
 end
 subgraph EnvoyNS["`envoy-gateway-system Namespace`"]
     LoadBalancer["LoadBalancer"]
-    Deployment["Deployment"]
+    EnvoyGatewayController["Envoy Gateway Controller"]
     Proxy["Proxy"]
 end
 subgraph TenantNS["`Tenant Namespace: _tenant-xyz_`"]
@@ -198,8 +198,7 @@ FrontendApp --> LoadBalancer
 LoadBalancer --> Proxy
 Proxy --> TargetService
 
-Deployment -. creates/updates .-> LoadBalancer
-Deployment -. creates/updates .-> Proxy
+EnvoyGatewayController -. creates/updates .-> Proxy
 
 classDef ReleaseNSStyle stroke:#FF8000,rx:12,ry:12,fill:none,stroke-dasharray:8
 classDef EnvoyNSStyle stroke:#38677B,rx:12,ry:12,fill:none,stroke-dasharray:8
@@ -245,7 +244,7 @@ subgraph ReleaseNS["CL Release Namespace"]
     end
 end
 subgraph EnvoyNS["`envoy-gateway-system Namespace`"]
-    Deployment["Deployment"]
+    EnvoyGatewayController["Envoy Gateway Controller"]
 end
 subgraph TenantNS["`Tenant Namespace: _tenant-xyz_`"]
     OtherRoute["`another HTTPRoute
@@ -263,9 +262,10 @@ SecPolG -.-> CallbackRoute
 SecPolG -.-> OtherRoute
 SecPolDummy -.-> PublicRoutes
 
-Deployment -. creates/updates .-> Gateway
-Deployment -. creates/updates .-> Routes
-Deployment -. creates/updates .-> SecPols
+EnvoyGatewayController -. watches .-> Gateway
+EnvoyGatewayController -. watches .-> Routes
+EnvoyGatewayController -. watches .-> SecPols
+EnvoyGatewayController -. watches .-> OtherRoute
 Routes -.-> TargetService
 OtherRoute -.-> TargetService
 
