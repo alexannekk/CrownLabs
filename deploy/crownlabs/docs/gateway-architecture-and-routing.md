@@ -50,7 +50,8 @@ subgraph EnvoyNS["`envoy-gateway-system Namespace`"]
     EnvoyGatewayController["Envoy Gateway Controller"]
     Proxy["Proxy"]
 end
-subgraph TenantNS["`Tenant Namespace: _tenant-xyz_`"]
+subgraph TenantNS["`Tenant Namespace: 
+    _tenant-xyz_`"]
     TargetService["Target Service"]
 end
 

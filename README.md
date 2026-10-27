@@ -118,12 +118,10 @@ class Cluster ClusterStyle
 ```
 
 ¹More about how to deploy CrownLabs [here](deploy/crownlabs/README.md).  
-²The Envoy Gateway Data Plane comprises the external LoadBalancer and Envoy Proxy,
-which process and forward incoming traffic. See the [Gateway API architecture
-documentation](deploy/crownlabs/docs/gateway-architecture-and-routing.md) for details.
-³More about Tenant soon.
-⁴More about Workspace soon.
-⁵More about Frontend [here](frontend/README.md).
+²The Envoy Gateway Data Plane comprises the external LoadBalancer and Envoy Proxy, which process and forward incoming traffic. See the [Gateway API architecture documentation](deploy/crownlabs/docs/gateway-architecture-and-routing.md) for details.  
+³More about Tenant soon.  
+⁴More about Workspace soon.  
+⁵More about Frontend [here](frontend/README.md).  
 ⁶More about QLKube [here](qlkube/README.md).
 
 ### Graph Legend:

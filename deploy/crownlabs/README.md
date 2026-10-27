@@ -75,7 +75,7 @@ class Others,Others2 InvisibleStyle
 class Operator,InstOp,InstAutOp,BastionOp,FrontendController,WebSSHController,QLKubeController OperatorStyle
 ```
 
-¹More about the Gateway API architecture [here](deploy/crownlabs/docs/gateway-architecture-and-routing.md).  
+¹More about the Gateway API architecture [here](docs/gateway-architecture-and-routing.md).  
 
 # How to deploy CrownLabs
 
