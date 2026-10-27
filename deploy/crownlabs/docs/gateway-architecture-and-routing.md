@@ -23,6 +23,127 @@ The gateway architecture separates the control plane from the data plane:
 * **Gateway Controller**: Reconciles `Gateway`, `HTTPRoute`, and `SecurityPolicy` resources, programming the underlying proxy configuration.
 * **Envoy Proxy**: Data plane proxies dispatching incoming HTTPS traffic to target services.
 
+The following diagrams describe the same Gateway architecture from two complementary
+perspectives. The **data plane flow** shows how requests travel through the deployed
+data-plane components: users and the frontend reach the Envoy load balancer, which
+forwards traffic through the Envoy proxy to the target service. The **control plane and
+routing flow** shows how the Kubernetes Gateway API resources work together: the Gateway
+routes requests to the appropriate HTTPRoutes, applies the configured Security Policies,
+and is continuously reconciled by the Envoy Gateway Controller, which watches these
+resources and updates the proxy configuration.
+
+Solid arrows represent data-plane request or forwarding paths, while dashed arrows
+represent control-plane and routing relationships.
+
+### Data Plane Flow
+
+```mermaid
+flowchart LR
+
+User@{shape: trap-b, label: "User Browser"}
+
+subgraph ReleaseNS["CL Release Namespace"]
+    FrontendApp["Frontend-app"]:::FrontendStyle
+end
+subgraph EnvoyNS["`envoy-gateway-system Namespace`"]
+    LoadBalancer["LoadBalancer"]
+    EnvoyGatewayController["Envoy Gateway Controller"]
+    Proxy["Proxy"]
+end
+subgraph TenantNS["`Tenant Namespace: _tenant-xyz_`"]
+    TargetService["Target Service"]
+end
+
+User --> FrontendApp
+User --> LoadBalancer
+FrontendApp --> LoadBalancer
+LoadBalancer --> Proxy
+Proxy --> TargetService
+
+EnvoyGatewayController -. creates/updates .-> Proxy
+
+classDef ReleaseNSStyle stroke:#FF8000,rx:12,ry:12,fill:none,stroke-dasharray:8
+classDef EnvoyNSStyle stroke:#38677B,rx:12,ry:12,fill:none,stroke-dasharray:8
+classDef TenantNSStyle stroke:#2222FF,rx:12,ry:12,fill:none,stroke-dasharray:8
+classDef TenantStyle stroke:#2222FF,rx:12,ry:12,fill:none
+classDef FrontendStyle stroke:#FDDCD7,rx:12,ry:12,fill:none
+
+class ReleaseNS ReleaseNSStyle
+class EnvoyNS EnvoyNSStyle
+class TenantNS TenantNSStyle
+class TargetService TenantStyle
+```
+
+### Control Plane and Routing Flow
+
+```mermaid
+flowchart LR
+
+User@{shape: trap-b, label: "User Browser"}
+
+subgraph ReleaseNS["CL Release Namespace"]
+    Gateway["`Gateway
+        (Envoy Gateway API)`"]
+    FrontendApp["Frontend-app"]:::FrontendStyle
+
+    subgraph SecPols["Security Policies"]
+        SecPolG["Security Policy"]
+        SecPolDummy["Dummy Security Policy"]
+    end
+
+    subgraph Routes["HTTPRoutes"]
+        CallbackRoute["`callback HTTPRoute
+            _/app/instauth/callback_`"]
+        subgraph PublicRoutes["Public Routes"]
+            FrontendRoute["`Frontend-app HTTPRoute
+                _/_`"]
+            WebSSHRoute["`WebSSH HTTPRoute
+                _/webssh_`"]
+            QLKubeRoute["`QLKube HTTPRoute
+                _/graph_`"]
+        end
+    end
+end
+subgraph EnvoyNS["`envoy-gateway-system Namespace`"]
+    EnvoyGatewayController["Envoy Gateway Controller"]
+end
+subgraph TenantNS["`Tenant Namespace: _tenant-xyz_`"]
+    OtherRoute["`another HTTPRoute
+        _/instance/{uuid}/{env-name}_`"]
+    TargetService["Target Service"]
+end
+
+User -.-> FrontendApp
+User -.-> Gateway
+FrontendApp -.-> Gateway
+Gateway -.-> Routes
+Gateway -.-> OtherRoute
+Gateway -. authenticated through .-> SecPols
+SecPolG -.-> CallbackRoute
+SecPolG -.-> OtherRoute
+SecPolDummy -.-> PublicRoutes
+
+EnvoyGatewayController -. watches .-> Gateway
+EnvoyGatewayController -. watches .-> Routes
+EnvoyGatewayController -. watches .-> SecPols
+EnvoyGatewayController -. watches .-> OtherRoute
+Routes -.-> TargetService
+OtherRoute -.-> TargetService
+
+classDef ReleaseNSStyle stroke:#FF8000,rx:12,ry:12,fill:none,stroke-dasharray:8
+classDef EnvoyNSStyle stroke:#38677B,rx:12,ry:12,fill:none,stroke-dasharray:8
+classDef TenantNSStyle stroke:#2222FF,rx:12,ry:12,fill:none,stroke-dasharray:8
+classDef GenericDomainStyle fill:none,rx:12,ry:12,stroke-dasharray:8
+classDef TenantStyle stroke:#2222FF,rx:12,ry:12,fill:none
+classDef FrontendStyle stroke:#FDDCD7,rx:12,ry:12,fill:none
+
+class ReleaseNS ReleaseNSStyle
+class EnvoyNS EnvoyNSStyle
+class TenantNS TenantNSStyle
+class Routes,PublicRoutes,SecPols GenericDomainStyle
+class OtherRoute,TargetService TenantStyle
+```
+
 ### Single Global Gateway Model
 
 CrownLabs adopts a **single global Gateway architecture** (`Crownlabs main`, class `envoy-public`) as the sole public entrypoint for the entire platform. The rationale behind this design includes:

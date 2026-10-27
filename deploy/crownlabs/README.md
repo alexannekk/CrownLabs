@@ -3,7 +3,8 @@
 The CrownLabs deployment is managed through the parent Helm chart in this directory, while ArgoCD creates a release for each target environment. The `operator-selector` label selects the release value and determines which CrownLabs components are installed in the **CrownLabs Release Namespace**.
 
 The following diagram gives the architectural context for the
-deployment steps described below.
+deployment steps described below, using the `production` release selected by
+the `operator-selector` label as an example.
 
 ```mermaid
 flowchart TB
@@ -56,7 +57,7 @@ subgraph Controllers["CL Release Namespace"]
         RBAC@{shape: docs, label: "RBAC
         _when enabled_
         Shared Cluster Roles"}
-        Gateway@{shape: docs, label: "Gateway/Exposition Related Resources"}
+        Gateway@{shape: docs, label: "Gateway/Exposition Related Resources¹"}
     end
 end
 
@@ -73,6 +74,8 @@ class Controllers ReleasesNSStyle
 class Others,Others2 InvisibleStyle
 class Operator,InstOp,InstAutOp,BastionOp,FrontendController,WebSSHController,QLKubeController OperatorStyle
 ```
+
+¹More about the Gateway API architecture [here](deploy/crownlabs/docs/gateway-architecture-and-routing.md).  
 
 # How to deploy CrownLabs
 
